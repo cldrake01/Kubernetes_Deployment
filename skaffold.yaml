@@ -1,0 +1,12 @@
+apiVersion: skaffold/v4beta1
+kind: Config
+metadata:
+  name: pythonproject
+build:
+  artifacts:
+  - image: getting-started
+    docker:
+      dockerfile: Dockerfile
+manifests:
+  rawYaml:
+  - Docker_Kubernetes_Ex.yml
