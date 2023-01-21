@@ -1,16 +1,12 @@
-# This is a sample Python script.
+import os
+import json
+import openai
 
-# Press ⌃R to execute it or replace it with your code.
-# Press Double ⇧ to search everywhere for classes, files, tool windows, actions, and settings.
+openai.organization = "org-qcHPiKIimtg6ssjx0Xla5AGH"
+openai.api_key = "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"
+openai.Model.retrieve("text-davinci-003")
+openai.Model.list()
 
+response = openai.Completion.create(model="text-davinci-003", prompt="Say this is a test", temperature=0, max_tokens=7)
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press ⌘F8 to toggle the breakpoint.
-
-
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+print(json.dumps(response["choices"]))
