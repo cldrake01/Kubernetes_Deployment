@@ -1,74 +1,149 @@
 # Native:
 import os
+import sys
+import time
 import json
+import email
 import asyncio
-import websockets
-# External:
-import openai
 import smtplib
 import imaplib
+import dataclasses
+from abc import ABC
 
-openai.organization = "org-qcHPiKIimtg6ssjx0Xla5AGH"
-openai.api_key = "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"
-openai.Model.retrieve("text-davinci-003")
-# openai.Model.list()
+# External:
+import openai
 
-# Connect to the email server
-mail = imaplib.IMAP4_SSL("imap.gmail.com")
-mail.login("your_email@gmail.com", "your_password")
 
-# Select the inbox
-mail.select("inbox")
+@dataclasses.dataclass
+class Client(ABC):
+    Username: str
+    email: str
+    app_password: str
 
-# Search for unread messages
-status, messages = mail.search(None, "UNSEEN")
 
-# Get the first unread message
-message_id = messages[0].split()[0]
+while True:
+    try:
+        app_password = "iwmzaxcczhhksbzo"
 
-# Fetch the message
-status, message = mail.fetch(message_id, "(RFC822)")
+        openai.organization = "org-qcHPiKIimtg6ssjx0Xla5AGH"
+        openai.api_key = "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"
+        # openai.Model.retrieve("text-davinci-003")
+        # openai.Model.list()
 
-# Parse the message
-message = message[0][1]
+        # Connect to the email server
+        mail = imaplib.IMAP4_SSL("imap.gmail.com")
+        mail.login("websockettesting503@gmail.com", app_password)
 
-# Convert the message to JSON
-message_json = json.dumps(message.decode())
+        # Select the inbox
+        mail.select("inbox")
 
-async def send_to_websocket(websocket, path):
-    await websocket.send(message_json)
+        # Search for unread messages
+        status, messages = mail.search(None, "UNSEEN")
+        print(f"Messages: {messages}")
 
-# Connect to the websocket server
-websocket = websockets.serve(send_to_websocket, "localhost", 8000)
+        if len(messages) == 0:
+            print("No unread messages in inbox.")
+            sys.exit(1)
 
-asyncio.get_event_loop().run_until_complete(websocket)
-asyncio.get_event_loop().run_forever()
+        # Get the first unread message
+        message_id = messages[0].split()[0]
+        print(f"Message ID: {message_id}")
 
-response = openai.Completion.create(model="text-davinci-003", prompt="Say this is a test", temperature=0, max_tokens=7)
+        # Fetch the message
+        status, message = mail.fetch(message_id, "(RFC822)")
 
-# Load the JSON file
-with open("response.json", "r") as json_file:
-    data = json.load(json_file)
+        msg = email.message_from_bytes(message[0][1])
 
-# Extract the email information from the JSON file
-name = data["name"]
-email = data["email address"]
-timestamp = data["timestamp"]
-text = data["text"]
+        if msg.is_multipart():
+            # Iterate over the different parts of the email message
+            for part in msg.walk():
+                if part.get_content_type() == 'text/plain':
+                    plain_text = part.get_payload(decode=True).decode()
+                    # Use regular expression to filter out the HTML tags
+                    import re
 
-# Create the email message
-message = f"Dear {name},\n\n{text}\n\nSincerely,\nYour Name\nTimestamp:{timestamp}"
+                    pattern = re.compile('<.*?>')
+                    plain_text = pattern.sub('', plain_text)
+        else:
+            plain_text = msg.get_payload(decode=True).decode()
+            # Use regular expression to filter out the HTML tags
+            import re
 
-# Connect to the email server
-server = smtplib.SMTP("smtp.gmail.com", 587)
-server.starttls()
+            pattern = re.compile('<.*?>')
+            plain_text = pattern.sub('', plain_text)
 
-# Log in to the email account
-server.login("your_email@gmail.com", "your_password")
+        print(f"Plaintext: {plain_text}")
 
-# Send the email
-server.sendmail("your_email@gmail.com", email, message)
+        """
 
-# Close the connection to the email server
-server.quit()
+        This functionality isn't needed yet.
 
+        async def send_to_websocket(websocket, path):
+            await websocket.send(message_json)
+
+        # Connect to the websocket server
+        websocket = websockets.serve(send_to_websocket, "localhost", 8000)
+
+        asyncio.get_event_loop().run_until_complete(websocket)
+
+        """
+
+        response = openai.Completion.create(model="text-davinci-003",
+                                            prompt="Answer any questions asked of you below:"
+                                                   + plain_text,
+                                            temperature=0,
+                                            max_tokens=700)
+
+        # Load the JSON file
+        response_str = json.dumps(response)
+        with open("response.json", "w") as json_file:
+            json.dump(response_str, json_file)
+
+        json_text = json.loads(response_str)
+
+        text = json_text['choices'][0]['text']
+
+        # message = message[0][1]
+        # print(f"Message: {message}")
+
+        # Convert the message to JSON
+        # message_json = json.dumps(message.decode())
+        # print(f"Message JSON: {message.decode()}")
+
+        # Extract the email information from the JSON file
+        name = "Collin Drake"
+
+        carat_email = msg['Return-Path']
+
+        email = carat_email[1:-1]
+
+        # timestamp = data["timestamp"]
+
+        # Create the email message
+        # message = f"Dear {name},\n\n{text}\n\nSincerely,\nYour Name\nTimestamp:{timestamp}"
+        message = f"Dear: {name},\n\n{text}\n\nSincerely,\nChatGPT\n"
+
+        # Connect to the email server
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()
+
+        # Log in to the email account
+        server.login("websockettesting503@gmail.com", app_password)
+
+        # Send the email
+        try:
+            server.sendmail("websockettesting503@gmail.com", email, message)
+            print(f"Email to {email} sent successfully.")
+        except Exception as e:
+            print(f"An error occurred while sending the email: {e}")
+
+        # Close the connection to the email server
+        server.quit()
+
+        time.sleep(600)
+    except Exception as e:
+        print(f"There are no emails to process currently, I'll check again in one minute. Causation for check: {e}")
+        time.sleep(10)
+        print("Checking my inbox again.")
+        time.sleep(6)
+        continue

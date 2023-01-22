@@ -1,17 +1,7 @@
 FROM debian:stretch-slim
 
-EXPOSE 8080
-
-FROM python:3.11
-
-ADD main.py /
-
-RUN pip install webhooks
-
-CMD [ "python", "./main.py" ]
-
 # Use an official Python runtime as the base image
-FROM python:3
+FROM python:3.11
 
 # Set the working directory in the container
 WORKDIR /app
@@ -29,5 +19,5 @@ COPY . .
 EXPOSE 8000
 
 # Run the websocket listener script
-CMD ["python", "websocket_listener.py"]
+CMD ["python", "main.py"]
 
