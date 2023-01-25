@@ -1,33 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: bb-demo
-  namespace: default
+  name: email-client
 spec:
-  replicas: 1
   selector:
     matchLabels:
-      bb: web
+      app: email-client
   template:
     metadata:
       labels:
-        bb: web
+        app: email-client
+        tag: production
     spec:
       containers:
-      - name: bb-site
-        image: getting-started
-        imagePullPolicy: Never
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: bb-entrypoint
-  namespace: default
-spec:
-  type: NodePort
-  selector:
-    bb: web
-  ports:
-  - port: 3000
-    targetPort: 3000
-    nodePort: 30001
+      - name: email-client
+        image: collindrake/postman
+        imagePullPolicy: Always
+        env:
+        - name: EMAIL
+          value: websockettesting503@gmail.com
+        - name: PASSWORD
+          value: iwmzaxcczhhksbzo
+        - name: OPENAI_API_KEY
+          value: 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
+        - name: OPENAI_ORGANIZATION
+          value: org-qcHPiKIimtg6ssjx0Xla5AGH

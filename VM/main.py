@@ -1,149 +1,133 @@
-# Native:
-import os
-import sys
-import time
-import json
 import email
-import asyncio
-import smtplib
 import imaplib
-import dataclasses
-from abc import ABC
-
-# External:
+import json
+import smtplib
+import time
 import openai
+import re
+from typing import Tuple
 
 
-@dataclasses.dataclass
-class Client(ABC):
-    Username: str
-    email: str
-    app_password: str
+# import pymongo as pymongo
 
 
-while True:
-    try:
-        app_password = "iwmzaxcczhhksbzo"
+class EmailClient:
 
-        openai.organization = "org-qcHPiKIimtg6ssjx0Xla5AGH"
-        openai.api_key = "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"
-        # openai.Model.retrieve("text-davinci-003")
-        # openai.Model.list()
+    def __init__(self, email: str,
+                 password: str,
+                 openai_api_key: str,
+                 openai_org: str,
+                 respone_conduct: str = "Answer any questions asked of you: ",
+                 client_params: str = ""
+                 ):
 
-        # Connect to the email server
+        self.client_email = email
+        self.client_email_password = password
+        self.response_conduct = respone_conduct
+        self.client_params = client_params
+        openai.organization = openai_org
+        openai.api_key = openai_api_key
+
+    def check_unread_emails(self) -> (str, email.message.EmailMessage):
         mail = imaplib.IMAP4_SSL("imap.gmail.com")
-        mail.login("websockettesting503@gmail.com", app_password)
-
-        # Select the inbox
+        mail.login(self.client_email, self.client_email_password)
         mail.select("inbox")
-
-        # Search for unread messages
         status, messages = mail.search(None, "UNSEEN")
-        print(f"Messages: {messages}")
-
         if len(messages) == 0:
             print("No unread messages in inbox.")
-            sys.exit(1)
-
-        # Get the first unread message
         message_id = messages[0].split()[0]
-        print(f"Message ID: {message_id}")
 
-        # Fetch the message
         status, message = mail.fetch(message_id, "(RFC822)")
-
         msg = email.message_from_bytes(message[0][1])
-
         if msg.is_multipart():
-            # Iterate over the different parts of the email message
             for part in msg.walk():
                 if part.get_content_type() == 'text/plain':
                     plain_text = part.get_payload(decode=True).decode()
-                    # Use regular expression to filter out the HTML tags
-                    import re
-
                     pattern = re.compile('<.*?>')
-                    plain_text = pattern.sub('', plain_text)
+                    processed_plain_text = pattern.sub('', plain_text)
+                    return processed_plain_text, msg
         else:
             plain_text = msg.get_payload(decode=True).decode()
-            # Use regular expression to filter out the HTML tags
-            import re
-
             pattern = re.compile('<.*?>')
-            plain_text = pattern.sub('', plain_text)
+            processed_plain_text = pattern.sub('', plain_text)
+            return processed_plain_text, msg
 
-        print(f"Plaintext: {plain_text}")
+    def generate_response(self, param_plain_text: str) -> dict:
+        response = openai.Completion.create(
+            model="text-davinci-003",
+            prompt=self.client_params + self.response_conduct + param_plain_text,
+            temperature=0,
+            max_tokens=1000
+        )
+        return response
 
-        """
-
-        This functionality isn't needed yet.
-
-        async def send_to_websocket(websocket, path):
-            await websocket.send(message_json)
-
-        # Connect to the websocket server
-        websocket = websockets.serve(send_to_websocket, "localhost", 8000)
-
-        asyncio.get_event_loop().run_until_complete(websocket)
-
-        """
-
-        response = openai.Completion.create(model="text-davinci-003",
-                                            prompt="Answer any questions asked of you below:"
-                                                   + plain_text,
-                                            temperature=0,
-                                            max_tokens=700)
-
-        # Load the JSON file
+    def save_response(self, response: dict):
         response_str = json.dumps(response)
         with open("response.json", "w") as json_file:
             json.dump(response_str, json_file)
 
-        json_text = json.loads(response_str)
-
-        text = json_text['choices'][0]['text']
-
-        # message = message[0][1]
-        # print(f"Message: {message}")
-
-        # Convert the message to JSON
-        # message_json = json.dumps(message.decode())
-        # print(f"Message JSON: {message.decode()}")
-
-        # Extract the email information from the JSON file
-        name = "Collin Drake"
-
+    def extract_email_info(self, msg: email.message.EmailMessage) -> Tuple[str, str]:
+        name = msg['From']
         carat_email = msg['Return-Path']
+        decarated_email = carat_email[1:-1]
+        return name, decarated_email
 
-        email = carat_email[1:-1]
 
-        # timestamp = data["timestamp"]
+email_client = EmailClient(email="websockettesting503@gmail.com",
+                           password="iwmzaxcczhhksbzo",
+                           respone_conduct="Act as if you are a claim adjuster representing a life insurance company, "
+                                           "respond to"
+                                           " client emails and fillings accordingly. "
+                                           "emails, and evaluate submitted claims; assume reasonable restrictions. ",
+                           client_params="Our institution does not provide reimbursements 130% greater than the cost "
+                                         "of our clients"
+                                         "sustained injuries, damages. or otherwise.",
+                           openai_api_key="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",
+                           openai_org="org-qcHPiKIimtg6ssjx0Xla5AGH")
+
+while True:
+    try:
+
+        """
+
+        client = pymongo.MongoClient(
+            "mongodb+srv://frac:frac1@cluster0.ithicjt.mongodb.net/?retryWrites=true&w=majority")
+        db = client.test
+        print(f"DB: {db}")
+        
+        """
+
+        outer_plain_text, outer_msg = email_client.check_unread_emails()
+        print(f"plain_text: {outer_plain_text}")
+        print(f"msg: {outer_msg}")
+
+        outer_response = email_client.generate_response(outer_plain_text)
+        print(f"response: {outer_response}")
+
+        email_client.save_response(outer_response)
+
+        email_client.extract_email_info(outer_msg)
+
+        outer_json_text = json.loads(json.dumps(outer_response))
+        print(f"json_text: {outer_json_text}")
+
+        outer_text = outer_json_text['choices'][0]['text']
+        print(f"text: {outer_text}")
+
+        outer_name, sender_email = email_client.extract_email_info(outer_msg)
 
         # Create the email message
-        # message = f"Dear {name},\n\n{text}\n\nSincerely,\nYour Name\nTimestamp:{timestamp}"
-        message = f"Dear: {name},\n\n{text}\n\nSincerely,\nChatGPT\n"
+        outer_message = f"Dear {outer_name},\n\n{outer_text}\n"
 
-        # Connect to the email server
+        # Send the email message
         server = smtplib.SMTP("smtp.gmail.com", 587)
         server.starttls()
-
-        # Log in to the email account
-        server.login("websockettesting503@gmail.com", app_password)
-
-        # Send the email
-        try:
-            server.sendmail("websockettesting503@gmail.com", email, message)
-            print(f"Email to {email} sent successfully.")
-        except Exception as e:
-            print(f"An error occurred while sending the email: {e}")
-
-        # Close the connection to the email server
+        server.login(email_client.client_email, email_client.client_email_password)
+        server.sendmail(email_client.client_email, sender_email, outer_message)
         server.quit()
-
-        time.sleep(600)
-    except Exception as e:
-        print(f"There are no emails to process currently, I'll check again in one minute. Causation for check: {e}")
-        time.sleep(10)
-        print("Checking my inbox again.")
-        time.sleep(6)
-        continue
+    except IndexError as e:
+        print(f"There are no emails to process currently, checking again in one minute.")
+        time.sleep(60)
+    except Exception as j:
+        print(f"{j}")
+        time.sleep(60)

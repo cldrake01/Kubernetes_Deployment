@@ -1,10 +1,10 @@
-apiVersion: skaffold/v4beta1
-kind: Config
+apiVersion: v1
+kind:
 metadata:
   name: pythonproject
 build:
   artifacts:
-  - image: getting-started
+  - image: collindrake/postman
     docker:
       dockerfile: Dockerfile
 manifests:
